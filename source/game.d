@@ -113,11 +113,11 @@ struct Player {
             position.y = clamp(position.y + gravity * dt, 0.0f, playerStartPosition.y);
         }
 
-        if (Keyboard.j.isPressed && (position.y >= playerStartPosition.y - 3.0f && position.y <= playerStartPosition.y)) {
+        if (isLeftPressed && (position.y >= playerStartPosition.y - 3.0f && position.y <= playerStartPosition.y)) {
             gravity = -moveSpeed * 2.75f;
             playAudio(game.jumpSound);
         }
-        if (Keyboard.k.isPressed) {
+        if (isRightPressed) {
             auto hasPicked = false;
             foreach (ref flower; game.flowers.items) {
                 if (!area.hasIntersection(flower.area)) continue;
@@ -378,7 +378,7 @@ struct Game {
         if (isPlaying) {
             // Return to start screen if player is dead.
             if (player.isDead) {
-                if ((Keyboard.j.isPressed || Keyboard.k.isPressed) && (freezeTimer == freezeWaitTime)) {
+                if ((isLeftPressed ||isRightPressed) && (freezeTimer == freezeWaitTime)) {
                     reload();
                     isPlaying = false;
                     return false;
@@ -425,7 +425,7 @@ struct Game {
             }
             return false;
         } else {
-            if (Keyboard.j.isPressed || Keyboard.k.isPressed) {
+            if (isLeftPressed ||isRightPressed) {
                 if (startScreenOffset == 0.0f) startScreenOffset = 0.001f;
             }
             if (startScreenOffset != 0) {
@@ -583,4 +583,20 @@ void throwRocks() {
 
 void drawAnimal(AnimalKind kind, Vec2 position, int frame, DrawOptions options = DrawOptions()) {
     drawTile(game.atlas, position, (frame == 0) ? (kind) : (kind + (frame * 16)), Vec2(tileSize), options);
+}
+
+bool isLeftPressed() {
+    version(WebAssembly) {
+        return Keyboard.j.isPressed || (mouseScreenPosition.x <= gameWidth * 0.5f && Mouse.left.isPressed);
+    } else {
+        return Keyboard.j.isPressed;
+    }
+}
+
+bool isRightPressed() {
+    version(WebAssembly) {
+        return Keyboard.k.isPressed || (mouseScreenPosition.x > gameWidth * 0.5f && Mouse.left.isPressed);
+    } else {
+        return Keyboard.k.isPressed;
+    }
 }
