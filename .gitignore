@@ -1,0 +1,14 @@
+.dub
+game
+web
+lib*
+*.so
+*.dylib
+*.dll
+*.a
+*.lib
+*.exe
+*.pdb
+*.o
+*.obj
+*.lst
