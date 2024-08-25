@@ -480,7 +480,9 @@ struct Game {
             drawRect(rect1, color3);
             drawRect(rect2, color4);
             drawText(font, Vec2(gameWidth * 0.5f, gameHeight * 0.5f + startScreenOffset), "|  Runani  |", textOptions);
-            drawText(font, Vec2(gameWidth * 0.5f, gameHeight * 0.9f + startScreenOffset), "(J) Jump (K) Take", textOptions);
+            drawText(font, Vec2(33.0f, gameHeight * 0.8f + startScreenOffset), "(SP)", textOptions);
+            drawText(font, Vec2(gameWidth - 64.0f, gameHeight * 0.8f + startScreenOffset), "(F)", textOptions);
+            drawText(font, Vec2(gameWidth * 0.5f, gameHeight * 0.9f + startScreenOffset), "(J) Jump  (K) Take", textOptions);
             drawAnimal(player.kind, Vec2(gameWidth * 0.5f + 1.0f, gameHeight * 0.5f - 19.0f + startScreenOffset), 0);
 
             drawTileMap(atlas, Vec2(0.0f, gameHeight + startScreenOffset), groundMap, Camera());
