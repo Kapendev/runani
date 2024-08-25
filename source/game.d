@@ -587,16 +587,16 @@ void drawAnimal(AnimalKind kind, Vec2 position, int frame, DrawOptions options =
 
 bool isLeftPressed() {
     version(WebAssembly) {
-        return Keyboard.j.isPressed || (mouseScreenPosition.x <= gameWidth * 0.5f && Mouse.left.isPressed);
+        return Keyboard.j.isPressed || Keyboard.space.isPressed || (mouseScreenPosition.x <= gameWidth * 0.5f && Mouse.left.isPressed);
     } else {
-        return Keyboard.j.isPressed;
+        return Keyboard.j.isPressed || Keyboard.space.isPressed;
     }
 }
 
 bool isRightPressed() {
     version(WebAssembly) {
-        return Keyboard.k.isPressed || (mouseScreenPosition.x > gameWidth * 0.5f && Mouse.left.isPressed);
+        return Keyboard.k.isPressed || Keyboard.f.isPressed || (mouseScreenPosition.x > gameWidth * 0.5f && Mouse.left.isPressed);
     } else {
-        return Keyboard.k.isPressed;
+        return Keyboard.k.isPressed || Keyboard.f.isPressed;
     }
 }
