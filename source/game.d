@@ -1,4 +1,4 @@
-module runjam.game;
+module runani.game;
 
 // TODO: Change loadTileMap(path) to loadTileMap(path, tileWidth, tileHeight) because it feels broken if you don't know what is happening.
 // TODO: Change drawTile function. The tileSize param should be split into tileWidth and tileHeight and should have type int.
@@ -115,7 +115,7 @@ struct Player {
 
         if (isLeftPressed && (position.y >= playerStartPosition.y - 3.0f && position.y <= playerStartPosition.y)) {
             gravity = -moveSpeed * 2.75f;
-            playAudio(game.jumpSound);
+            playSound(game.jumpSound);
         }
         if (isRightPressed) {
             auto hasPicked = false;
@@ -138,7 +138,7 @@ struct Player {
                 hasPicked = true;
             }
             if (hasPicked) {
-                playAudio(game.takeSound);
+                playSound(game.takeSound);
             }
         }
     
@@ -268,7 +268,7 @@ struct Rock {
                 game.player.startHitDelayTimer();
                 game.player.flowerCount = 0;
             }
-            playAudio(game.deathSound);
+            playSound(game.deathSound);
         }
     }
 
@@ -286,18 +286,18 @@ struct Rock {
 }
 
 struct Game {
-    Font font;
-    Texture atlas;
-    Audio backgroundMusic;
-    Audio jumpSound;
-    Audio takeSound;
-    Audio deathSound;
+    FontId font;
+    TextureId atlas;
+    SoundId backgroundMusic;
+    SoundId jumpSound;
+    SoundId takeSound;
+    SoundId deathSound;
     TileMap groundMap;
     TileMap skyMap;
 
     Player player;
     List!Rock rocks;
-    FlagList!Flower flowers;
+    SparseList!Flower flowers;
 
     bool[10] flowerPointValues;
     int score;
@@ -326,35 +326,20 @@ struct Game {
 
         atlas = loadTexture("sprites/atlas.png").unwrap();
 
-        backgroundMusic = loadAudio("audio/debussy_arabesque_no_1_l_66.mp3").unwrap();
-        backgroundMusic.setPitch(1.0f);
-        backgroundMusic.setVolume(0.6f);
-        jumpSound = loadAudio("audio/jump.wav").unwrap();
-        jumpSound.setPitch(1.1f);
-        jumpSound.setVolume(0.28f);
-        takeSound = loadAudio("audio/take.wav").unwrap();
-        takeSound.setPitch(1.0f);
-        takeSound.setVolume(0.25f);
-        deathSound = loadAudio("audio/death.wav").unwrap();
-        deathSound.setPitch(2.0f);
-        deathSound.setVolume(0.1f);
+        backgroundMusic = loadSound("audio/debussy_arabesque_no_1_l_66.mp3", 0.6f, 1.0f).unwrap();
+        jumpSound = loadSound("audio/jump.wav", 0.28f, 1.1f).unwrap();
+        takeSound = loadSound("audio/take.wav", 0.25f, 1.0f).unwrap();
+        deathSound = loadSound("audio/death.wav", 0.1f, 2.0f).unwrap();
         
-        font = loadFont("fonts/pixeloid.ttf", 11).unwrap();
-        font.runeSpacing = 1;
-        font.lineSpacing = 14;
+        font = loadFont("fonts/pixeloid.ttf", 11, 1, 14).unwrap();
 
-        groundMap = loadTileMap("maps/ground.csv").unwrap();
-        groundMap.tileWidth = tileSize;
-        groundMap.tileHeight = tileSize;
+        groundMap = loadRawTileMap("maps/ground.csv", tileSize, tileSize).unwrap();
+        skyMap = loadRawTileMap("maps/sky.csv", tileSize, tileSize).unwrap();
 
-        skyMap = loadTileMap("maps/sky.csv").unwrap();
-        skyMap.tileWidth = tileSize;
-        skyMap.tileHeight = tileSize;
-
-        playAudio(game.backgroundMusic);
+        playSound(game.backgroundMusic);
     }
 
-    bool update() {
+    bool update(float dt) {
         // Define some basic keys for doing basic stuff.
         debug {
             if (Keyboard.esc.isPressed) return true;
@@ -362,18 +347,17 @@ struct Game {
         version(WebAssembly) {
             // Nothing lol.
         } else {
-            if (Keyboard.f11.isPressed) toggleFullscreen();
+            if (Keyboard.f11.isPressed) toggleIsFullscreen();
         }
         if (Keyboard.n1.isPressed) reload();
         if (Keyboard.n2.isPressed) isDebug = !isDebug;
         if (Keyboard.n3.isPressed) toggleResolution(gameWidth, gameHeight);
 
         // Define some basic variables that are needed everywhere.
-        auto dt = deltaTime * timeRate;
         auto prevTimeRate = timeRate;
 
         // Update audio.
-        updateAudio(backgroundMusic);
+        updateSound(backgroundMusic);
 
         if (isPlaying) {
             // Return to start screen if player is dead.
@@ -386,7 +370,7 @@ struct Game {
             }
 
             // Freeze timer code. Stupid, but it works.
-            freezeTimer = clamp(freezeTimer + deltaTime, 0.0f, freezeWaitTime);
+            freezeTimer = clamp(freezeTimer + dt, 0.0f, freezeWaitTime);
             if (isFreezeTimerRunning) {
                 timeRate = 0.0f;
             } else if (timeRate == 0.0f) {
@@ -407,12 +391,12 @@ struct Game {
             }
 
             // Update the world.
-            player.update(dt);
+            player.update(dt * timeRate);
             foreach (ref rock; rocks) {
-                rock.update(dt);
+                rock.update(dt * timeRate);
             }
             foreach (ref flower; flowers.items) {
-                flower.update(dt);
+                flower.update(dt * timeRate);
             }
 
             // Update the score and add new flowers when needed.
@@ -429,7 +413,7 @@ struct Game {
                 if (startScreenOffset == 0.0f) startScreenOffset = 0.001f;
             }
             if (startScreenOffset != 0) {
-                startScreenOffset = startScreenOffset.moveTo(cast(float) -gameHeight, moveSpeed * 3.0f * deltaTime);
+                startScreenOffset = startScreenOffset.moveTo(cast(float) -gameHeight, moveSpeed * 3.0f * dt);
             }
             if (startScreenOffset == -gameHeight) {
                 startScreenOffset = 0.0f;
@@ -440,8 +424,6 @@ struct Game {
     }
 
     void draw() {
-        import ray = popka.ray; // Cringe. Will change it one day.
-
         if (isPlaying) {
             auto textOptions = DrawOptions();
             textOptions.hook = Hook.center;
@@ -462,7 +444,7 @@ struct Game {
             drawTileMap(atlas, Vec2(), groundMap, Camera());
 
             // Draw the game info.
-            auto scoreTextOffset = sin(ray.GetTime() * 5.0f) * 2.0f;
+            auto scoreTextOffset = sin(elapsedTime * 5.0f) * 2.0f;
             drawText(font, Vec2(gameWidth * 0.5f, 26.0f + scoreTextOffset), "{}".format(score), textOptions);
             if (player.isDead) {
                 drawText(font, Vec2(gameWidth * 0.5f, gameHeight * 0.5f + 4.0f), "Oh no!", textOptions);
@@ -493,12 +475,6 @@ struct Game {
     void free() {
         rocks.free();
         flowers.free();
-        backgroundMusic.free();
-        jumpSound.free();
-        takeSound.free();
-        deathSound.free();
-        font.free();
-        atlas.free();
         groundMap.free();
         skyMap.free();
         this = Game();
@@ -584,7 +560,7 @@ void throwRocks() {
 }
 
 void drawAnimal(AnimalKind kind, Vec2 position, int frame, DrawOptions options = DrawOptions()) {
-    drawTile(game.atlas, position, (frame == 0) ? (kind) : (kind + (frame * 16)), Vec2(tileSize), options);
+    drawTile(game.atlas, position, (frame == 0) ? (kind) : (kind + (frame * 16)), tileSize, tileSize, options);
 }
 
 bool isLeftPressed() {

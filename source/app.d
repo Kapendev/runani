@@ -1,22 +1,23 @@
-module runjam.app;
+module runani.app;
 
 import popka;
-import runjam.game;
+import runani.game;
 
-bool gameLoop() {
-    if (game.update()) return true;
+void ready() {
+    lockResolution(gameWidth, gameHeight);
+    setBackgroundColor(color4);
+    setIsPixelPerfect(true);
+    game.ready();
+}
+
+bool update(float dt) {
+    if (game.update(dt)) return true;
     game.draw();
     return false;
 }
 
-void gameStart() {
-    togglePixelPerfect();
-    setBackgroundColor(color4);
-    lockResolution(gameWidth, gameHeight);
-
-    game.ready();
-    updateWindow!gameLoop();
+void finish() {
     game.free();
 }
 
-mixin callGameStart!(gameStart, 640, 576);
+mixin runGame!(ready, update, finish, 640, 576);
