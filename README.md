@@ -5,6 +5,7 @@ Runani is an endless runner game where you help cute animals collect cute flower
 You can compile the game with:
 
 ```bash
+dub run popka:setup
 dub build
 ```
 
