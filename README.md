@@ -1,6 +1,6 @@
 # Runani
 
-Runani is an endless runner game where you help cute animals collect cute flowers. Keep your animal friend running as long as you can, avoid obstacles, and gather as many points as possible.
+[Runani](https://kapendev.itch.io/runani) is an endless runner game where you help cute animals collect cute flowers. Keep your animal friend running as long as you can, avoid obstacles, and gather as many points as possible.
 
 You can compile the game with:
 
