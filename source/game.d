@@ -1,13 +1,5 @@
 module runani.game;
 
-// TODO: Change loadTileMap(path) to loadTileMap(path, tileWidth, tileHeight) because it feels broken if you don't know what is happening.
-// TODO: Change drawTile function. The tileSize param should be split into tileWidth and tileHeight and should have type int.
-// TODO: Maybe replace tileWidth and tileHeight with just tileSize that is an int.
-// TODO: Try to make the Monogram Font to work. For some reason it is always blurry (and I hate pixel art).
-// TODO: Add tick function.
-
-// NOTE: My best score is 1043.
-
 import popka;
 
 Game game;
@@ -34,17 +26,14 @@ struct Player {
     Vec2 prevPosition;
     Vec2 maxFlowerOffset;
     AnimalKind kind;
+    Timer flashTimer = Timer(0.1f);
+    Timer hitDelayTimer = Timer(1.25f);
 
     float gravity = 0.0f;
     float frame = 0.0f;
-    float flashTimer = flashWaitTime;
-    float hitDelayTimer = hitDelayWaitTime;
     int flowerCount;
     bool isDead;
     bool flashState;
-
-    enum flashWaitTime = 0.1f;
-    enum hitDelayWaitTime = 1.25f;
 
     this(Vec2 position) {
         this.position = position;
@@ -59,7 +48,7 @@ struct Player {
             case AnimalKind.dog: result.position += Vec2(-1.0f, 2.0f); break;
             case AnimalKind.bird: result.position += Vec2(-1.0f, 1.0f); break;
         }
-        if (result.rightPoint.x <= 0.0f || result.leftPoint.x >= gameWidth || isHitDelayTimerRunning) {
+        if (result.rightPoint.x <= 0.0f || result.leftPoint.x >= gameWidth || hitDelayTimer.isRunning) {
             return Rect(Vec2(-256.0f), Vec2());
         }
         return result;
@@ -77,34 +66,26 @@ struct Player {
         return position.x < prevPosition.x;
     }
 
-    bool isHitDelayTimerRunning() {
-        return hitDelayTimer < hitDelayWaitTime;
-    }
-
-    void startHitDelayTimer() {
-        hitDelayTimer = 0.0f;
-        flashTimer = 0.0f;
-    }
-
     void randomizeKind() {
         kind = cast(AnimalKind) (randi % (AnimalKind.max + 1));
     }
 
     void update(float dt) {
-        prevPosition = position;
-        gravity += moveSpeed * 12.0f * dt;
-        hitDelayTimer = clamp(hitDelayTimer + dt, 0.0f, hitDelayWaitTime);
-        flashTimer = clamp(flashTimer + dt, 0.0f, flashWaitTime);
-        if (isHitDelayTimerRunning) {
-            if (flashTimer == flashWaitTime) {
+        hitDelayTimer.update(dt);
+        flashTimer.update(dt);
+
+        if (hitDelayTimer.isRunning) {
+            if (flashTimer.hasStopped) {
                 flashState = !flashState;
-                flashTimer = 0.0f;
+                flashTimer.start();
             }
         } else {
-            flashTimer = flashWaitTime;
+            flashTimer.stop();
             flashState = false;
         }
 
+        prevPosition = position;
+        gravity += moveSpeed * 12.0f * dt;
         position.x = wrap(position.x + moveSpeed * dt, -tileSize, gameWidth + tileSize);
 
         if (gravity > 0.0f) {
@@ -159,7 +140,7 @@ struct Player {
 
     void draw() {
         auto options = DrawOptions();
-        if (isHitDelayTimerRunning) {
+        if (hitDelayTimer.isRunning) {
             options.color = flashState ? blank : white;
         }
         drawAnimal(kind, position, cast(int) frame, options);
@@ -217,7 +198,7 @@ struct Flower {
         auto texturePosition = position;
         texturePosition.y -= cast(int) game.player.frame == 1;
 
-        drawTexture(game.atlas, texturePosition, Rect(Vec2(16.0f, 32.0f), Vec2(16.0f)), options);
+        drawTextureArea(game.atlas, Rect(Vec2(16.0f, 32.0f), Vec2(16.0f)), texturePosition, options);
         if (game.isDebug) {
             drawRect(area, color0);
         }
@@ -256,16 +237,18 @@ struct Rock {
             if (game.player.isDead) return;
             if (game.player.flowerCount == 0) {
                 game.player.isDead = true;
-                game.startFreezeTimer();
-                game.player.startHitDelayTimer();
+                game.freezeTimer.start();
+                game.player.hitDelayTimer.start();
+                game.player.flashTimer.start();
             } else {
                 final switch (game.player.kind) {
                     case AnimalKind.mouse: game.player.maxFlowerOffset.y = -5; break;
                     case AnimalKind.dog: game.player.maxFlowerOffset.y = -13; break;
                     case AnimalKind.bird: game.player.maxFlowerOffset.y = -8; break;
                 }
-                game.startFreezeTimer();
-                game.player.startHitDelayTimer();
+                game.freezeTimer.start();
+                game.player.hitDelayTimer.start();
+                game.player.flashTimer.start();
                 game.player.flowerCount = 0;
             }
             playSound(game.deathSound);
@@ -278,7 +261,7 @@ struct Rock {
         options.rotation = floor(frameRotation) * -90.0f;
         auto texturePosition = position;
         texturePosition.y -= (cast(int) frameRotation == 1 || cast(int) frameRotation == 3);
-        drawTexture(game.atlas, texturePosition, Rect(Vec2(0.0f, 32.0f), Vec2(16.0f)), options);
+        drawTextureArea(game.atlas, Rect(Vec2(0.0f, 32.0f), Vec2(16.0f)), texturePosition, options);
         if (game.isDebug) {
             drawRect(area, color0);
         }
@@ -294,6 +277,7 @@ struct Game {
     SoundId deathSound;
     TileMap groundMap;
     TileMap skyMap;
+    Timer freezeTimer = Timer(0.2f);
 
     Player player;
     List!Rock rocks;
@@ -301,40 +285,30 @@ struct Game {
 
     bool[10] flowerPointValues;
     int score;
-    int scoreTrigger = dfltScoreTrigger;
+    int scoreTrigger = scoreTriggerValue;
     float timeRate = 1.0f;
-    float freezeTimer = freezeWaitTime;
     float startScreenOffset = 0.0f;
     bool isDebug;
     bool isPlaying;
 
-    enum dfltScoreTrigger = 30;
-    enum freezeWaitTime = 0.2f;
-
-    bool isFreezeTimerRunning() {
-        return freezeTimer < freezeWaitTime;
-    }
-
-    void startFreezeTimer() {
-        freezeTimer = 0.0f;
-    }
+    enum scoreTriggerValue = 30;
 
     void ready() {
         player = Player(playerStartPosition);
         player.randomizeKind();
         appendFlowers(true);
 
-        atlas = loadTexture("sprites/atlas.png").unwrap();
+        atlas = loadTexture("sprites/atlas.png").get();
 
-        backgroundMusic = loadSound("audio/debussy_arabesque_no_1_l_66.mp3", 0.6f, 1.0f).unwrap();
-        jumpSound = loadSound("audio/jump.wav", 0.28f, 1.1f).unwrap();
-        takeSound = loadSound("audio/take.wav", 0.25f, 1.0f).unwrap();
-        deathSound = loadSound("audio/death.wav", 0.1f, 2.0f).unwrap();
+        backgroundMusic = loadSound("audio/debussy_arabesque_no_1_l_66.mp3", 0.6f, 1.0f).get();
+        jumpSound = loadSound("audio/jump.wav", 0.28f, 1.1f).get();
+        takeSound = loadSound("audio/take.wav", 0.25f, 1.0f).get();
+        deathSound = loadSound("audio/death.wav", 0.1f, 2.0f).get();
         
-        font = loadFont("fonts/pixeloid.ttf", 11, 1, 14).unwrap();
+        font = loadFont("fonts/pixeloid.ttf", 11, 1, 14).get();
 
-        groundMap = loadRawTileMap("maps/ground.csv", tileSize, tileSize).unwrap();
-        skyMap = loadRawTileMap("maps/sky.csv", tileSize, tileSize).unwrap();
+        groundMap = loadRawTileMap("maps/ground.csv", tileSize, tileSize).get();
+        skyMap = loadRawTileMap("maps/sky.csv", tileSize, tileSize).get();
 
         playSound(game.backgroundMusic);
     }
@@ -358,11 +332,12 @@ struct Game {
 
         // Update audio.
         updateSound(backgroundMusic);
+        freezeTimer.update(dt);
 
         if (isPlaying) {
             // Return to start screen if player is dead.
             if (player.isDead) {
-                if ((isLeftPressed ||isRightPressed) && (freezeTimer == freezeWaitTime)) {
+                if ((isLeftPressed ||isRightPressed) && (freezeTimer.time == freezeTimer.duration)) {
                     reload();
                     isPlaying = false;
                     return false;
@@ -370,8 +345,7 @@ struct Game {
             }
 
             // Freeze timer code. Stupid, but it works.
-            freezeTimer = clamp(freezeTimer + dt, 0.0f, freezeWaitTime);
-            if (isFreezeTimerRunning) {
+            if (freezeTimer.isRunning) {
                 timeRate = 0.0f;
             } else if (timeRate == 0.0f) {
                 if (player.isDead) {
@@ -405,7 +379,7 @@ struct Game {
             }
             if (score >= scoreTrigger) {
                 appendFlowers();
-                scoreTrigger += dfltScoreTrigger;
+                scoreTrigger += scoreTriggerValue;
             }
             return false;
         } else {
@@ -430,7 +404,7 @@ struct Game {
             textOptions.color = color3;
 
             // Draw the world.
-            drawTileMap(atlas, Vec2(), skyMap, Camera());
+            drawTileMap(atlas, skyMap, Vec2(), Camera());
             foreach (flower; flowers.items) {
                 if (!flower.canFollowPlayer) flower.draw();
             }
@@ -441,13 +415,13 @@ struct Game {
             foreach (rock; rocks) {
                 rock.draw();
             }
-            drawTileMap(atlas, Vec2(), groundMap, Camera());
+            drawTileMap(atlas, groundMap, Vec2(), Camera());
 
             // Draw the game info.
             auto scoreTextOffset = sin(elapsedTime * 5.0f) * 2.0f;
-            drawText(font, Vec2(gameWidth * 0.5f, 26.0f + scoreTextOffset), "{}".format(score), textOptions);
+            drawText(font, "{}".format(score), Vec2(gameWidth * 0.5f, 26.0f + scoreTextOffset), textOptions);
             if (player.isDead) {
-                drawText(font, Vec2(gameWidth * 0.5f, gameHeight * 0.5f + 4.0f), "Oh no!", textOptions);
+                drawText(font, "Oh no!", Vec2(gameWidth * 0.5f, gameHeight * 0.5f + 4.0f), textOptions);
             }
         } else {
             auto textOptions = DrawOptions();
@@ -461,14 +435,14 @@ struct Game {
 
             drawRect(rect1, color3);
             drawRect(rect2, color4);
-            drawText(font, Vec2(gameWidth * 0.5f, gameHeight * 0.5f + startScreenOffset), "|  Runani  |", textOptions);
-            drawText(font, Vec2(33.0f, gameHeight * 0.8f + startScreenOffset), "(SP)", textOptions);
-            drawText(font, Vec2(gameWidth - 64.0f, gameHeight * 0.8f + startScreenOffset), "(F)", textOptions);
-            drawText(font, Vec2(gameWidth * 0.5f, gameHeight * 0.9f + startScreenOffset), "(J) Jump  (K) Take", textOptions);
+            drawText(font, "|  Runani  |", Vec2(gameWidth * 0.5f, gameHeight * 0.5f + startScreenOffset), textOptions);
+            drawText(font, "(SP)", Vec2(33.0f, gameHeight * 0.8f + startScreenOffset), textOptions);
+            drawText(font, "(F)", Vec2(gameWidth - 64.0f, gameHeight * 0.8f + startScreenOffset), textOptions);
+            drawText(font, "(J) Jump  (K) Take", Vec2(gameWidth * 0.5f, gameHeight * 0.9f + startScreenOffset), textOptions);
             drawAnimal(player.kind, Vec2(gameWidth * 0.5f + 1.0f, gameHeight * 0.5f - 19.0f + startScreenOffset), 0);
 
-            drawTileMap(atlas, Vec2(0.0f, gameHeight + startScreenOffset), groundMap, Camera());
-            drawTileMap(atlas, Vec2(0.0f, gameHeight + startScreenOffset), skyMap, Camera());
+            drawTileMap(atlas, groundMap, Vec2(0.0f, gameHeight + startScreenOffset), Camera());
+            drawTileMap(atlas, skyMap, Vec2(0.0f, gameHeight + startScreenOffset), Camera());
         }
     }
 
@@ -482,7 +456,7 @@ struct Game {
 
     void reload() {
         score = 0;
-        scoreTrigger = dfltScoreTrigger;
+        scoreTrigger = scoreTriggerValue;
         timeRate = 1.0f;
         player = Player(playerStartPosition);
         player.randomizeKind();
@@ -560,7 +534,7 @@ void throwRocks() {
 }
 
 void drawAnimal(AnimalKind kind, Vec2 position, int frame, DrawOptions options = DrawOptions()) {
-    drawTile(game.atlas, position, (frame == 0) ? (kind) : (kind + (frame * 16)), tileSize, tileSize, options);
+    drawTile(game.atlas, Tile((frame == 0) ? (kind) : (kind + (frame * 16)), tileSize, tileSize), position, options);
 }
 
 bool isLeftPressed() {
