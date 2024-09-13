@@ -1,7 +1,7 @@
 {
 	"fileVersion": 1,
 	"versions": {
-		"joka": "0.0.7",
-		"popka": "0.0.18"
+		"joka": "0.0.10",
+		"popka": "0.0.21"
 	}
 }

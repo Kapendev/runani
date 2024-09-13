@@ -298,14 +298,14 @@ struct Game {
         player.randomizeKind();
         appendFlowers(true);
 
-        atlas = loadTexture("sprites/atlas.png").get();
+        atlas = loadTexture("sprites/atlas.png");
 
-        backgroundMusic = loadSound("audio/debussy_arabesque_no_1_l_66.mp3", 0.6f, 1.0f).get();
-        jumpSound = loadSound("audio/jump.wav", 0.28f, 1.1f).get();
-        takeSound = loadSound("audio/take.wav", 0.25f, 1.0f).get();
-        deathSound = loadSound("audio/death.wav", 0.1f, 2.0f).get();
+        backgroundMusic = loadSound("audio/debussy_arabesque_no_1_l_66.mp3", 0.6f, 1.0f);
+        jumpSound = loadSound("audio/jump.wav", 0.28f, 1.1f);
+        takeSound = loadSound("audio/take.wav", 0.25f, 1.0f);
+        deathSound = loadSound("audio/death.wav", 0.1f, 2.0f);
         
-        font = loadFont("fonts/pixeloid.ttf", 11, 1, 14).get();
+        font = loadFont("fonts/pixeloid.ttf", 11, 1, 14, []);
 
         groundMap = loadRawTileMap("maps/ground.csv", tileSize, tileSize).get();
         skyMap = loadRawTileMap("maps/sky.csv", tileSize, tileSize).get();
