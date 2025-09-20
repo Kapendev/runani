@@ -407,8 +407,11 @@ struct Game {
             drawText("(J) Jump  (K) Take", Vec2(gameWidth * 0.5f, gameHeight * 0.9f + startScreenOffset), textOptions);
             drawAnimal(player.kind, Vec2(gameWidth * 0.5f + 1.0f, gameHeight * 0.5f - 19.0f + startScreenOffset), 0);
 
-            groundMap.y = gameHeight + startScreenOffset - 2; // NO IDEA WHAT THE -3 DOES HERE BUT WHO CARES.
-            skyMap.y = gameHeight + startScreenOffset - 2;
+            groundMap.y = gameHeight + startScreenOffset;
+            skyMap.y = gameHeight + startScreenOffset;
+            if (groundMap.y < 4) groundMap.y = 0; // NOTE: NO IDEA AND I AM NOT GOING TO THINK ABOUT IT.
+            if (skyMap.y < 4) skyMap.y = 0;
+            echo(groundMap.y);
             drawTileMap(groundMap);
             drawTileMap(skyMap);
         }

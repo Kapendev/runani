@@ -4,11 +4,11 @@ import parin;
 import runani.game;
 
 void ready() {
+    setIsPixelPerfect(true);
+    setIsPixelSnapped(true);
     lockResolution(gameWidth, gameHeight);
     setBackgroundColor(color4);
     setBorderColor(color4);
-    setIsPixelPerfect(true);
-    setIsPixelSnapped(true);
     game.ready();
 }
 
