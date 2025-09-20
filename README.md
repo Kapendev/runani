@@ -2,11 +2,10 @@
 
 [Runani](https://kapendev.itch.io/runani) is an endless runner game where you help cute animals collect cute flowers. Keep your animal friend running as long as you can, avoid obstacles, and gather as many points as possible.
 
-You can compile the game with:
+You can compile and run the game with:
 
 ```bash
-dub run popka:setup
-dub build
+dub run
 ```
 
 ## License
