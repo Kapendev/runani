@@ -288,7 +288,6 @@ struct Game {
         deathSound = loadSound("audio/death.wav", 0.1f, 2.0f);
         groundMap.parseCsv(loadTempText("maps/ground.csv").getOr(), tileSize, tileSize);
         skyMap.parseCsv(loadTempText("maps/sky.csv").getOr(), tileSize, tileSize);
-
         playSound(game.backgroundMusic);
     }
 
@@ -509,7 +508,7 @@ void drawAnimal(AnimalKind kind, Vec2 position, short frame, DrawOptions options
 
 bool isLeftPressed() {
     version(WebAssembly) {
-        return Keyboard.j.isPressed || Keyboard.space.isPressed || (mouseScreenPosition.x <= gameWidth * 0.5f && Mouse.left.isPressed);
+        return Keyboard.j.isPressed || Keyboard.space.isPressed || (mouse.x <= gameWidth * 0.5f && Mouse.left.isPressed);
     } else {
         return Keyboard.j.isPressed || Keyboard.space.isPressed;
     }
@@ -517,7 +516,7 @@ bool isLeftPressed() {
 
 bool isRightPressed() {
     version(WebAssembly) {
-        return Keyboard.k.isPressed || Keyboard.f.isPressed || (mouseScreenPosition.x > gameWidth * 0.5f && Mouse.left.isPressed);
+        return Keyboard.k.isPressed || Keyboard.f.isPressed || (mouse.x > gameWidth * 0.5f && Mouse.left.isPressed);
     } else {
         return Keyboard.k.isPressed || Keyboard.f.isPressed;
     }
