@@ -1,54 +1,26 @@
 {
-    "name" : "game",
-    "description" : "A game made with Popka.",
     "authors" : ["Name"],
-    "copyright" : "Copyright © 2024, Name",
+    "copyright" : "Copyright © 2025, Name",
+    "description" : "A game made with Parin.",
     "license" : "proprietary",
+    "name" : "game",
+    "stringImportPaths": [
+        "assets"
+    ],
     "dependencies": {
-        "joka": "*",
-        "popka": "*"
+        "joka": {"path": "../joka"},
+        "parin": "*",
     },
     "configurations": [
         {
-            "name": "linux",
-            "targetType": "executable",
-            "platforms": ["linux"],
-            "dflags": ["-i"],
-            "lflags": ["-L.", "-rpath=$$ORIGIN"],
-            "libs": [
-                "raylib",
-                "GL",
-                "m",
-                "pthread",
-                "dl",
-                "rt",
-                "X11"
-            ]
+            "name": "default",
+            "targetType": "executable"
         },
         {
-            "name": "windows",
-            "targetType": "executable",
-            "platforms": ["windows"],
-            "dflags": ["-i"],
-            "libs": [
-                "raylib"
-            ]
-        },
-        {
-            "name": "osx",
-            "targetType": "executable",
-            "platforms": ["osx"],
-            "dflags": ["-i"],
-            "lflags": ["-L.", "-rpath", "@executable_path/"],
-            "libs": [
-                "raylib.500"
-            ]
-        },
-        {
-            "name": "web",
-            "targetType": "staticLibrary",
-            "targetName": "webgame",
-            "dflags": ["-mtriple=wasm32-unknown-unknown-wasm", "-checkaction=halt", "-betterC", "-i", "--release"]
+            "name": "wasm",
+            "targetType": "library",
+            "targetName": "game_wasm",
+            "dflags": ["-mtriple=wasm32-unknown-unknown-wasm", "-checkaction=halt", "-i", "--release", "-betterC"]
         }
     ]
 }

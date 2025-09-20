@@ -1,6 +1,6 @@
 module runani.game;
 
-import popka;
+import parin;
 
 Game game;
 
@@ -15,7 +15,7 @@ enum color2 = toRgb(0x346856);
 enum color3 = toRgb(0x88c070);
 enum color4 = toRgb(0xe0f8d0);
 
-enum AnimalKind {
+enum AnimalKind : short {
     mouse,
     dog,
     bird,
@@ -48,7 +48,7 @@ struct Player {
             case AnimalKind.dog: result.position += Vec2(-1.0f, 2.0f); break;
             case AnimalKind.bird: result.position += Vec2(-1.0f, 1.0f); break;
         }
-        if (result.rightPoint.x <= 0.0f || result.leftPoint.x >= gameWidth || hitDelayTimer.isRunning) {
+        if (result.rightPoint.x <= 0.0f || result.leftPoint.x >= gameWidth || hitDelayTimer.isActive) {
             return Rect(Vec2(-256.0f), Vec2());
         }
         return result;
@@ -71,10 +71,7 @@ struct Player {
     }
 
     void update(float dt) {
-        hitDelayTimer.update(dt);
-        flashTimer.update(dt);
-
-        if (hitDelayTimer.isRunning) {
+        if (hitDelayTimer.isActive) {
             if (flashTimer.hasStopped) {
                 flashState = !flashState;
                 flashTimer.start();
@@ -122,7 +119,6 @@ struct Player {
                 playSound(game.takeSound);
             }
         }
-    
         if (isOnFloor) {
             if (hasTouchedFloor) {
                 frame = 0.0f;
@@ -139,14 +135,8 @@ struct Player {
     }
 
     void draw() {
-        auto options = DrawOptions();
-        if (hitDelayTimer.isRunning) {
-            options.color = flashState ? blank : white;
-        }
-        drawAnimal(kind, position, cast(int) frame, options);
-        if (game.isDebug) {
-            drawRect(area, color0);
-        }
+        drawAnimal(kind, position, cast(short) frame, DrawOptions(hitDelayTimer.isActive ? (flashState ? blank : white) : white));
+        if (game.isDebug) drawRect(area, color0);
     }
 }
 
@@ -178,7 +168,6 @@ struct Flower {
 
     void update(float dt) {
         prevPosition = position;
-        
         auto realTargetPosition = canFollowPlayer ? game.player.position : targetPosition;
         if (canFollowPlayer) {
             position = position.moveTo(realTargetPosition + playerOffset, Vec2(moveSpeed * 3.0f * dt));
@@ -192,13 +181,10 @@ struct Flower {
     }
 
     void draw() {
-        auto options = DrawOptions();
-        options.flip = flip;
-
+        auto options = DrawOptions(flip);
         auto texturePosition = position;
         texturePosition.y -= cast(int) game.player.frame == 1;
-
-        drawTextureArea(game.atlas, Rect(Vec2(16.0f, 32.0f), Vec2(16.0f)), texturePosition, options);
+        drawTextureArea(Rect(Vec2(16.0f, 32.0f), Vec2(16.0f)), texturePosition, options);
         if (game.isDebug) {
             drawRect(area, color0);
         }
@@ -225,7 +211,6 @@ struct Rock {
 
     void update(float dt) {
         frameRotation = wrap(frameRotation + 9.0f * dt, 0.0f, 4.0f);
-        
         if (position.x > -tileSize) {
             position.x -= moveSpeed * 1.8f * dt;
         }
@@ -256,12 +241,11 @@ struct Rock {
     }
 
     void draw() {
-        auto options = DrawOptions();
-        options.hook = Hook.center;
+        auto options = DrawOptions(Hook.center);
         options.rotation = floor(frameRotation) * -90.0f;
         auto texturePosition = position;
         texturePosition.y -= (cast(int) frameRotation == 1 || cast(int) frameRotation == 3);
-        drawTextureArea(game.atlas, Rect(Vec2(0.0f, 32.0f), Vec2(16.0f)), texturePosition, options);
+        drawTextureArea(Rect(Vec2(0.0f, 32.0f), Vec2(16.0f)), texturePosition, options);
         if (game.isDebug) {
             drawRect(area, color0);
         }
@@ -269,8 +253,6 @@ struct Rock {
 }
 
 struct Game {
-    FontId font;
-    TextureId atlas;
     SoundId backgroundMusic;
     SoundId jumpSound;
     SoundId takeSound;
@@ -298,17 +280,14 @@ struct Game {
         player.randomizeKind();
         appendFlowers(true);
 
-        atlas = loadTexture("sprites/atlas.png");
-
+        setDefaultTexture(loadTexture("sprites/atlas.png"));
+        setDefaultFont(loadFont("fonts/pixeloid.ttf", 11, 1, 14, []));
         backgroundMusic = loadSound("audio/debussy_arabesque_no_1_l_66.mp3", 0.6f, 1.0f);
         jumpSound = loadSound("audio/jump.wav", 0.28f, 1.1f);
         takeSound = loadSound("audio/take.wav", 0.25f, 1.0f);
         deathSound = loadSound("audio/death.wav", 0.1f, 2.0f);
-        
-        font = loadFont("fonts/pixeloid.ttf", 11, 1, 14, []);
-
-        groundMap = loadRawTileMap("maps/ground.csv", tileSize, tileSize).get();
-        skyMap = loadRawTileMap("maps/sky.csv", tileSize, tileSize).get();
+        groundMap.parseCsv(loadTempText("maps/ground.csv").getOr(), tileSize, tileSize);
+        skyMap.parseCsv(loadTempText("maps/sky.csv").getOr(), tileSize, tileSize);
 
         playSound(game.backgroundMusic);
     }
@@ -319,7 +298,6 @@ struct Game {
             if (Keyboard.esc.isPressed) return true;
         }
         version(WebAssembly) {
-            // Nothing lol.
         } else {
             if (Keyboard.f11.isPressed) toggleIsFullscreen();
         }
@@ -329,15 +307,10 @@ struct Game {
 
         // Define some basic variables that are needed everywhere.
         auto prevTimeRate = timeRate;
-
-        // Update audio.
-        updateSound(backgroundMusic);
-        freezeTimer.update(dt);
-
         if (isPlaying) {
             // Return to start screen if player is dead.
             if (player.isDead) {
-                if ((isLeftPressed ||isRightPressed) && (freezeTimer.time == freezeTimer.duration)) {
+                if ((isLeftPressed ||isRightPressed) && !freezeTimer.isActive) {
                     reload();
                     isPlaying = false;
                     return false;
@@ -345,7 +318,7 @@ struct Game {
             }
 
             // Freeze timer code. Stupid, but it works.
-            if (freezeTimer.isRunning) {
+            if (freezeTimer.isActive) {
                 timeRate = 0.0f;
             } else if (timeRate == 0.0f) {
                 if (player.isDead) {
@@ -399,12 +372,9 @@ struct Game {
 
     void draw() {
         if (isPlaying) {
-            auto textOptions = DrawOptions();
-            textOptions.hook = Hook.center;
-            textOptions.color = color3;
-
+            auto textOptions = DrawOptions(color3, Hook.center);
             // Draw the world.
-            drawTileMap(atlas, skyMap, Vec2(), Camera());
+            drawTileMap(skyMap);
             foreach (flower; flowers.items) {
                 if (!flower.canFollowPlayer) flower.draw();
             }
@@ -415,19 +385,16 @@ struct Game {
             foreach (rock; rocks) {
                 rock.draw();
             }
-            drawTileMap(atlas, groundMap, Vec2(), Camera());
+            drawTileMap(groundMap);
 
             // Draw the game info.
             auto scoreTextOffset = sin(elapsedTime * 5.0f) * 2.0f;
-            drawText(font, "{}".format(score), Vec2(gameWidth * 0.5f, 26.0f + scoreTextOffset), textOptions);
+            drawText("{}".fmt(score), Vec2(gameWidth * 0.5f, 26.0f + scoreTextOffset), textOptions);
             if (player.isDead) {
-                drawText(font, "Oh no!", Vec2(gameWidth * 0.5f, gameHeight * 0.5f + 4.0f), textOptions);
+                drawText("Oh no!", Vec2(gameWidth * 0.5f, gameHeight * 0.5f + 4.0f), textOptions);
             }
         } else {
-            auto textOptions = DrawOptions();
-            textOptions.hook = Hook.center;
-            textOptions.color = color3;
-
+            auto textOptions = DrawOptions(color3, Hook.center);
             auto rect1 = Rect(gameWidth, gameHeight).subAll(2.0f);
             auto rect2 = Rect(gameWidth, gameHeight).subAll(4.0f);
             rect1.position.y += startScreenOffset;
@@ -435,14 +402,16 @@ struct Game {
 
             drawRect(rect1, color3);
             drawRect(rect2, color4);
-            drawText(font, "|  Runani  |", Vec2(gameWidth * 0.5f, gameHeight * 0.5f + startScreenOffset), textOptions);
-            drawText(font, "(SP)", Vec2(33.0f, gameHeight * 0.8f + startScreenOffset), textOptions);
-            drawText(font, "(F)", Vec2(gameWidth - 64.0f, gameHeight * 0.8f + startScreenOffset), textOptions);
-            drawText(font, "(J) Jump  (K) Take", Vec2(gameWidth * 0.5f, gameHeight * 0.9f + startScreenOffset), textOptions);
+            drawText("|  Runani  |", Vec2(gameWidth * 0.5f, gameHeight * 0.5f + startScreenOffset), textOptions);
+            drawText("(SP)", Vec2(33.0f, gameHeight * 0.8f + startScreenOffset), textOptions);
+            drawText("(F)", Vec2(gameWidth - 64.0f, gameHeight * 0.8f + startScreenOffset), textOptions);
+            drawText("(J) Jump  (K) Take", Vec2(gameWidth * 0.5f, gameHeight * 0.9f + startScreenOffset), textOptions);
             drawAnimal(player.kind, Vec2(gameWidth * 0.5f + 1.0f, gameHeight * 0.5f - 19.0f + startScreenOffset), 0);
 
-            drawTileMap(atlas, groundMap, Vec2(0.0f, gameHeight + startScreenOffset), Camera());
-            drawTileMap(atlas, skyMap, Vec2(0.0f, gameHeight + startScreenOffset), Camera());
+            groundMap.y = gameHeight + startScreenOffset - 3; // NO IDEA WHAT THE -3 DOES HERE BUT WHO CARES.
+            skyMap.y = gameHeight + startScreenOffset - 3;
+            drawTileMap(groundMap);
+            drawTileMap(skyMap);
         }
     }
 
@@ -460,13 +429,11 @@ struct Game {
         timeRate = 1.0f;
         player = Player(playerStartPosition);
         player.randomizeKind();
-
         foreach (ref point; flowerPointValues) {
             point = false;
         }
         flowers.clear();
         appendFlowers(true);
-
         rocks.clear();
     }
 }
@@ -533,8 +500,11 @@ void throwRocks() {
     }
 }
 
-void drawAnimal(AnimalKind kind, Vec2 position, int frame, DrawOptions options = DrawOptions()) {
-    drawTile(game.atlas, Tile((frame == 0) ? (kind) : (kind + (frame * 16)), tileSize, tileSize), position, options);
+void drawAnimal(AnimalKind kind, Vec2 position, short frame, DrawOptions options = DrawOptions()) {
+    drawTile(
+        Tile(cast(short) tileSize, cast(short) tileSize, cast(short) (frame == 0 ? kind : kind + frame * 16), position),
+        options
+    );
 }
 
 bool isLeftPressed() {

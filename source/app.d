@@ -1,6 +1,6 @@
 module runani.app;
 
-import popka;
+import parin;
 import runani.game;
 
 void ready() {
