@@ -411,7 +411,6 @@ struct Game {
             skyMap.y = gameHeight + startScreenOffset;
             if (groundMap.y < 4) groundMap.y = 0; // NOTE: NO IDEA AND I AM NOT GOING TO THINK ABOUT IT.
             if (skyMap.y < 4) skyMap.y = 0;
-            echo(groundMap.y);
             drawTileMap(groundMap);
             drawTileMap(skyMap);
         }
