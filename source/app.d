@@ -6,7 +6,9 @@ import runani.game;
 void ready() {
     lockResolution(gameWidth, gameHeight);
     setBackgroundColor(color4);
+    setBorderColor(color4);
     setIsPixelPerfect(true);
+    setIsPixelSnapped(true);
     game.ready();
 }
 
