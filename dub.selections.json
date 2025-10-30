@@ -1,7 +1,6 @@
 {
 	"fileVersion": 1,
 	"versions": {
-		"joka": "0.0.38",
-		"parin": "0.0.66"
+		"parin": "0.1.0"
 	}
 }

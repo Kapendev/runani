@@ -7,8 +7,8 @@ void ready() {
     setIsPixelPerfect(true);
     setIsPixelSnapped(true);
     lockResolution(gameWidth, gameHeight);
-    setBackgroundColor(color4);
-    setBorderColor(color4);
+    setWindowBackgroundColor(color4);
+    setWindowBorderColor(color4);
     game.ready();
 }
 

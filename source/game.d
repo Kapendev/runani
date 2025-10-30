@@ -116,7 +116,7 @@ struct Player {
                 hasPicked = true;
             }
             if (hasPicked) {
-                playSound(game.takeSound);
+                startSound(game.takeSound);
             }
         }
         if (isOnFloor) {
@@ -198,7 +198,7 @@ struct Rock {
 
     this(float startOffset) {
         this.startOffset = startOffset;
-        this.position = rockStartPosition + Vec2(startOffset, 0.0f);;
+        this.position = rockStartPosition + Vec2(startOffset, 0.0f);
     }
 
     Rect area() {
@@ -281,13 +281,13 @@ struct Game {
         appendFlowers(true);
 
         setDefaultTexture(loadTexture("sprites/atlas.png"));
-        setDefaultFont(loadFont("fonts/pixeloid.ttf", 11, 1, 14, []));
-        backgroundMusic = loadSound("audio/debussy_arabesque_no_1_l_66.mp3", 0.6f, 1.0f);
-        jumpSound = loadSound("audio/jump.wav", 0.28f, 1.1f);
-        takeSound = loadSound("audio/take.wav", 0.25f, 1.0f);
-        deathSound = loadSound("audio/death.wav", 0.1f, 2.0f);
-        groundMap.parseCsv(loadTempText("maps/ground.csv").getOr(), tileSize, tileSize);
-        skyMap.parseCsv(loadTempText("maps/sky.csv").getOr(), tileSize, tileSize);
+        setDefaultFont(loadFont("fonts/pixeloid.ttf", 11, 1, 14));
+        backgroundMusic = loadSound("audio/debussy_arabesque_no_1_l_66.mp3", 0.6f, 1.0f, true);
+        jumpSound = loadSound("audio/jump.wav", 0.28f, 1.1f, false);
+        takeSound = loadSound("audio/take.wav", 0.25f, 1.0f, false);
+        deathSound = loadSound("audio/death.wav", 0.1f, 2.0f, false);
+        groundMap.parseCsv(loadTempText("maps/ground.csv"), tileSize, tileSize);
+        skyMap.parseCsv(loadTempText("maps/sky.csv"), tileSize, tileSize);
         playSound(game.backgroundMusic);
     }
 
